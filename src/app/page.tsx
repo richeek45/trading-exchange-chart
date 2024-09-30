@@ -1,4 +1,4 @@
-import ChartSwitcher from '../../components/ChartSwitcher';
+import ChartSwitcher from '../components/ChartSwitcher';
 
 export default function Home() {
   return (

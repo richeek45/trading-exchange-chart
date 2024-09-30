@@ -167,7 +167,8 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
               x: {
                 type: "time",
                 time: {
-                  unit: unit[selectedPeriod] as timeUnit,
+                  // unit: unit[selectedPeriod] as timeUnit,
+                  unit: 'day',
                   tooltipFormat: "ll",
                 },
                 title: {
@@ -352,7 +353,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
 
 
   useEffect(() => {
-    fetchCoinAPIData('1MIN');
+    fetchCoinAPIData(timePeriods[0]);
 
     return () => {
       if (chartRef.current) {
