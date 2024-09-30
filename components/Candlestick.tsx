@@ -5,12 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import axios from 'axios';
 import { CandlestickController, CandlestickElement } from "chartjs-chart-financial";
 import annotationPlugin, { AnnotationOptions } from 'chartjs-plugin-annotation';
+import zoomPlugin from 'chartjs-plugin-zoom';
 import 'chartjs-adapter-moment';
 import "chart.js/auto";
 import {Chart, ChartData, Point, registerables } from "chart.js"; 
-// import {chartData as chartData1} from './chart';
+import {chartData as chartData1} from './chart';
 
-Chart.register( ...registerables, CandlestickController, CandlestickElement, annotationPlugin );
+Chart.register( ...registerables, CandlestickController, CandlestickElement, annotationPlugin, zoomPlugin );
 
 interface CandlestickData {
   x: number;
@@ -20,6 +21,24 @@ interface CandlestickData {
   c: number;
   v: number;
 }
+
+type timeUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+const unit = {
+  '1MIN': 'minute',
+  '5MIN': 'minute', 
+  '30MIN': 'minute', 
+  '1HRS': 'hour', 
+  '4HRS': 'hour', 
+  '1DAY': 'day', 
+  '7DAY': 'day', 
+  '1MTH': 'day',
+  '3MTH': 'month',
+  '6MTH': 'month', 
+  '1YRS': 'year'
+}
+
+const timePeriods = ['1MIN', '5MIN', '30MIN', '1HRS', '4HRS', '1DAY', '7DAY', '1MTH', '3MTH', '6MTH', '1YRS'];
+
 
 const Candlestick = ({ MODE } : {MODE : string}) => {
   const [chartData, setChartData] = useState<CandlestickData[]>([]);
@@ -31,7 +50,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLine, setCurrentLine] = useState<string | null>(null);
 
-  const [, setSelectedPeriod] = useState('1MIN');
+  const [selectedPeriod, setSelectedPeriod] = useState('1MIN');
 
   const calculateBollingerBands = (data: CandlestickData[], period = 10) => {
     const middleBand = [];
@@ -62,14 +81,14 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
   
   const fetchCoinAPIData = async (selectedPeriod: string) => {
     try {
-      const response = await axios.get(`http://localhost:3000/api?mode=${MODE}&period=${selectedPeriod}`)      
-      const ohlcData = response.data.data;
-      console.log(ohlcData);
-      setChartData(ohlcData);
-      initChart(ohlcData);
+      // const response = await axios.get(`http://localhost:3000/api?mode=${MODE}&period=${selectedPeriod}`)      
+      // const ohlcData = response.data.data;
+      // console.log(ohlcData);
+      // setChartData(ohlcData);
+      // initChart(ohlcData);
 
-      // setChartData(chartData1);
-      // initChart(chartData1);
+      setChartData(chartData1);
+      initChart(chartData1);
 
     } catch(error) {
       console.error("Error fetching data from CoinAPI", error);
@@ -101,7 +120,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
           data: ohlcData.map(({ x, v }) => ({ x, y: v })),
           yAxisID: 'y1', 
           backgroundColor: 'rgba(0, 123, 255, 0.5)', 
-          barThickness: 2
+          barThickness: 5
         },
         {
           label: 'Upper Bollinger Band',
@@ -148,7 +167,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
               x: {
                 type: "time",
                 time: {
-                  unit: "day",
+                  unit: unit[selectedPeriod] as timeUnit,
                   tooltipFormat: "ll",
                 },
                 title: {
@@ -180,9 +199,31 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
                 },
               },
             },
+            layout: {
+              padding: {
+                left: 10,
+                right: 10,
+                top: 20,
+                bottom: 20,
+              },
+            },
+            responsive: true, 
+            // maintainAspectRatio: false, 
             plugins: {
               annotation: {
                 annotations: annotations,
+              },
+              zoom: {
+                zoom: {
+                  wheel: {
+                    enabled: true
+                  },
+                  pinch: {
+                    enabled: true
+                  },
+                  mode: 'xy',     
+                  // speed: 0.1,   
+                }
               },
             },
           },
@@ -191,7 +232,6 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
     }
   };
 
-  const timePeriods = ['1MIN', '5MIN', '30MIN', '1HRS', '4HRS', '1DAY', '7DAY', '1MONTH'];
 
   const handleClick = (period: string) => {
     setSelectedPeriod(period);
