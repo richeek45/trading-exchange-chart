@@ -48,7 +48,6 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
   const [startPoint, setStartPoint] = useState<number | null>(null);
   const [startCoord, setStartCoord] = useState<{ x: number, y: number} | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [currentLine, setCurrentLine] = useState<string | null>(null);
 
   const [selectedPeriod, setSelectedPeriod] = useState('1MIN');
 
@@ -245,16 +244,14 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
     setStartCoord({ x: xCoord, y: yCoord });
   };
 
-  
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const lineId = 'line_1' || currentLine || `line_${new Date().getTime()}`;
     if (!isDrawing || !startCoord) return;
     const chart = chartRef.current;
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    if (chart && startCoord && lineId && chart.options.plugins?.annotation?.annotations) {
+    if (chart && startCoord && chart.options.plugins?.annotation?.annotations) {
       const newLine: AnnotationOptions<"line"> = {
         type: 'line',
         xMin: chart.scales.x.getValueForPixel(startCoord.x),
@@ -266,7 +263,6 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
         borderWidth: 2,
       };
       setAnnotations([newLine])
-      setCurrentLine(lineId);
     }
 
   };
@@ -313,7 +309,6 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
 
         setStartCoord(null); 
         setIsDrawing(false);
-        setCurrentLine(null);
       }
     }
   };
