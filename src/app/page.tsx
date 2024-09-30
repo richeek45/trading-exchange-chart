@@ -1,4 +1,8 @@
-import ChartSwitcher from '../components/ChartSwitcher';
+// import ChartSwitcher from '../components/ChartSwitcher';
+
+import dynamic from 'next/dynamic';
+
+const ChartSwitcher = dynamic(() => import('../components/ChartSwitcher'), {ssr: false})
 
 export default function Home() {
   return (
