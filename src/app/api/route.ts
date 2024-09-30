@@ -15,11 +15,7 @@ interface ohlcvData {
   volume_traded: number; 
 }
 
-  // const periodId = '1DAY';
   const startTime = '2022-01-01T00:00:00';
-  // const historicalurl = `https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=${periodId}&time_start=${startTime}`
-    // const historicalUrl = 'GET https://rest.coinapi.io/v1/exchangerate/BTC/USD/history?period_id=1DAY&time_start=2023-01-01T00:00:00';
-  // const candleStickRates = 'https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/latest'
 const baseUrl = `https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD`;
 
 export async function GET(request: NextRequest) { 
@@ -27,9 +23,9 @@ export async function GET(request: NextRequest) {
   const period = request.nextUrl.searchParams.get('period');
   let url: string = '';
   if (mode === MODE.LATEST) {
-    url = `${baseUrl}/latest?period_id=${period}`;
+    url = `${baseUrl}/latest?period_id=${period}&limit=50`;
   } else if (mode === MODE.HISTORICAL) {
-    url = `${baseUrl}/historical?period_id=${period}&startTime=${startTime}`;
+    url = `${baseUrl}/history?period_id=${period}&time_start=${startTime}&limit=50`;
   }
   const response = await axios.get(url, { headers: { 'X-CoinAPI-Key': process.env.COIN_API_KEY }})
   const ohlcData = response.data.map((data: ohlcvData) => ({
