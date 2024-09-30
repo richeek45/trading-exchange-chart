@@ -9,7 +9,7 @@ import zoomPlugin from 'chartjs-plugin-zoom';
 import 'chartjs-adapter-moment';
 import "chart.js/auto";
 import {Chart, ChartData, Point, registerables } from "chart.js"; 
-import {chartData as chartData1} from './chart';
+// import {chartData as chartData1} from './chart';
 
 Chart.register( ...registerables, CandlestickController, CandlestickElement, annotationPlugin, zoomPlugin );
 
@@ -23,7 +23,7 @@ interface CandlestickData {
 }
 
 type timeUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
-const unit = {
+const unit: Record<string, timeUnit> = {
   '1MIN': 'minute',
   '5MIN': 'minute', 
   '30MIN': 'minute', 
@@ -81,14 +81,14 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
   
   const fetchCoinAPIData = async (selectedPeriod: string) => {
     try {
-      // const response = await axios.get(`http://localhost:3000/api?mode=${MODE}&period=${selectedPeriod}`)      
-      // const ohlcData = response.data.data;
-      // console.log(ohlcData);
-      // setChartData(ohlcData);
-      // initChart(ohlcData);
+      const response = await axios.get(`http://localhost:3000/api?mode=${MODE}&period=${selectedPeriod}`)      
+      const ohlcData = response.data.data;
+      console.log(ohlcData);
+      setChartData(ohlcData);
+      initChart(ohlcData);
 
-      setChartData(chartData1);
-      initChart(chartData1);
+      // setChartData(chartData1);
+      // initChart(chartData1);
 
     } catch(error) {
       console.error("Error fetching data from CoinAPI", error);
@@ -167,8 +167,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
               x: {
                 type: "time",
                 time: {
-                  // unit: unit[selectedPeriod] as timeUnit,
-                  unit: 'day',
+                  unit: unit[selectedPeriod] as timeUnit,
                   tooltipFormat: "ll",
                 },
                 title: {
@@ -200,15 +199,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
                 },
               },
             },
-            layout: {
-              padding: {
-                left: 10,
-                right: 10,
-                top: 20,
-                bottom: 20,
-              },
-            },
-            responsive: true, 
+            // responsive: true, 
             // maintainAspectRatio: false, 
             plugins: {
               annotation: {
@@ -368,7 +359,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
 
   return (
     <div>
-      <Tabs defaultValue={timePeriods[0]} className="w-[400px]">
+      <Tabs defaultValue={timePeriods[0]} >
         <TabsList>
           {timePeriods.map(timePeriod => (
             <TabsTrigger key={timePeriod} onClick={() => handleClick(timePeriod)} value={timePeriod}>{timePeriod}</TabsTrigger>
@@ -376,7 +367,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
         </TabsList>
         {timePeriods.map((timePeriod) => (
         <TabsContent key={timePeriod} value={timePeriod}>
-          <canvas className="canvas" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} ref={canvasRef}></canvas>
+          <canvas className="canvas"  onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} ref={canvasRef}></canvas>
         </TabsContent>
          ))} 
       </Tabs>
