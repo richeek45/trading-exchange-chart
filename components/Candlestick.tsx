@@ -2,23 +2,16 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEffect, useRef, useState } from "react";
-// import axios from 'axios';
+import axios from 'axios';
 import { CandlestickController, CandlestickElement } from "chartjs-chart-financial";
-import annotationPlugin from 'chartjs-plugin-annotation';
+import annotationPlugin, { AnnotationOptions } from 'chartjs-plugin-annotation';
 import 'chartjs-adapter-moment';
 import "chart.js/auto";
-import {Chart, registerables } from "chart.js"; 
-
-import {chartData as chartData1} from './chart';
-// import { Line } from 'react-chartjs-2';
-// import {chart1hrs} from './latestChart1hr';
-// import {chart5mins} from './latestChart5min';
-// import {chart1mins} from './latestChart1min';
+import {Chart, ChartData, Point, registerables } from "chart.js"; 
+// import {chartData as chartData1} from './chart';
 
 Chart.register( ...registerables, CandlestickController, CandlestickElement, annotationPlugin );
 
-
-// const COIN_API_KEY = '7EF53282-2CE5-4309-8AA6-C42CB4D7A684';
 interface CandlestickData {
   x: number;
   o: number;
@@ -28,22 +21,19 @@ interface CandlestickData {
   v: number;
 }
 
-const Candlestick = () => {
+const Candlestick = ({ MODE } : {MODE : string}) => {
   const [chartData, setChartData] = useState<CandlestickData[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
-  const [fibonacciLevels, setFibonacciLevels] = useState<number[]>([]);
+  const [annotations, setAnnotations] = useState<AnnotationOptions<"line">[]>([]);
   const [startPoint, setStartPoint] = useState<number | null>(null);
-  // const [endPoint, setEndPoint] = useState<number | null>(null);
+  const [startCoord, setStartCoord] = useState<{ x: number, y: number} | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentLine, setCurrentLine] = useState<string | null>(null);
 
-  const [selectedPeriod, setSelectedPeriod] = useState('1MIN');
-  // const periodId = '1DAY';
-  // const startTime = '2022-01-01T00:00:00';
-  // const historicalurl = `https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?period_id=${periodId}&time_start=${startTime}`
-    // const historicalUrl = 'GET https://rest.coinapi.io/v1/exchangerate/BTC/USD/history?period_id=1DAY&time_start=2023-01-01T00:00:00';
-  // const candleStickRates = 'https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/latest'
+  const [, setSelectedPeriod] = useState('1MIN');
 
-  const calculateBollingerBands = (data: CandlestickData[], period = 20) => {
+  const calculateBollingerBands = (data: CandlestickData[], period = 10) => {
     const middleBand = [];
     const upperBand = [];
     const lowerBand = [];
@@ -70,26 +60,16 @@ const Candlestick = () => {
     return { middleBand, upperBand, lowerBand };
   }
   
-  const fetchCoinAPIData = async (url: string, selectedPeriod: string) => {
+  const fetchCoinAPIData = async (selectedPeriod: string) => {
     try {
-      const latesturl = `${url}/latest?period_id=${selectedPeriod}`
-      console.log(latesturl);
-      // const response = await axios.get(latesturl, { headers: { 'X-CoinAPI-Key': COIN_API_KEY }})
-      
-      // const ohlcData: CandlestickData[] = response.data.map((data) => ({
-      //   x: new Date(data.time_period_start).getTime(), // Date
-      //   o: data.price_open,
-      //   h: data.price_high, 
-      //   l: data.price_low,
-      //   c: data.price_close,
-      //   v: data.volume_traded  
-      // }));
+      const response = await axios.get(`http://localhost:3000/api?mode=${MODE}&period=${selectedPeriod}`)      
+      const ohlcData = response.data.data;
+      console.log(ohlcData);
+      setChartData(ohlcData);
+      initChart(ohlcData);
 
-      // setChartData(ohlcData);
-      // initChart(ohlcData);
-
-      setChartData(chartData1);
-      initChart(chartData1);
+      // setChartData(chartData1);
+      // initChart(chartData1);
 
     } catch(error) {
       console.error("Error fetching data from CoinAPI", error);
@@ -104,62 +84,65 @@ const Candlestick = () => {
       if (ctx && chartRef.current) {
         chartRef.current.destroy(); 
       }
+
+      const data: ChartData<'line' | 'bar' | 'candlestick'> = {
+        datasets: [
+        {
+          type: "candlestick",
+          label: "BTC/USD Candlestick",
+          data: ohlcData,
+          borderColor: "rgba(0, 255, 0, 1)", 
+          backgroundColor: "rgba(255, 0, 0, 1)", 
+          yAxisID: 'y'
+        },
+        {
+          label: 'Volume',
+          type: 'bar', 
+          data: ohlcData.map(({ x, v }) => ({ x, y: v })),
+          yAxisID: 'y1', 
+          backgroundColor: 'rgba(0, 123, 255, 0.5)', 
+          barThickness: 2
+        },
+        {
+          label: 'Upper Bollinger Band',
+          data: upperBand.map((value, index) => ({
+            x: ohlcData[index].x,
+            y: value,
+          })) as Point[],
+          type: 'line',
+          borderColor: 'rgba(255, 0, 0, 0.5)',
+          borderWidth: 1,
+          fill: false,
+        },
+        {
+          label: 'Lower Bollinger Band',
+          data: lowerBand.map((value, index) => ({
+            x: ohlcData[index].x,
+            y: value,
+          })) as Point[],
+          type: 'line',
+          borderColor: 'rgba(0, 0, 255, 0.5)',
+          borderWidth: 1,
+          fill: false,
+        },
+        {
+          label: 'Middle Band',
+          data: middleBand.map((value, index) => ({
+            x: ohlcData[index].x,
+            y: value,
+          })) as Point[],
+          type: 'line',
+          borderColor: 'rgba(0, 255, 0, 0.5)',
+          borderWidth: 1,
+          fill: false,
+        },
+      ]
+      }
   
       if (ctx) {
         chartRef.current = new Chart(ctx, {
-          type: "candlestick",
-          data: {
-            datasets: [
-              {
-              label: "BTC/USD Candlestick",
-              data: ohlcData,
-              borderColor: "rgba(0, 255, 0, 1)", 
-              backgroundColor: "rgba(255, 0, 0, 1)", 
-              yAxisID: 'y'
-            },
-            {
-              label: 'Volume',
-              type: 'bar', 
-              data: ohlcData.map(({ x, v }) => ({ x, y: v })),
-              yAxisID: 'y1', 
-              backgroundColor: 'rgba(0, 123, 255, 0.5)', 
-              barThickness: 2
-            },
-            {
-              label: 'Upper Bollinger Band',
-              data: upperBand.map((value, index) => ({
-                x: ohlcData[index].x,
-                y: value,
-              })),
-              type: 'line',
-              borderColor: 'rgba(255, 0, 0, 0.5)',
-              borderWidth: 1,
-              fill: false,
-            },
-            {
-              label: 'Lower Bollinger Band',
-              data: lowerBand.map((value, index) => ({
-                x: ohlcData[index].x,
-                y: value,
-              })),
-              type: 'line',
-              borderColor: 'rgba(0, 0, 255, 0.5)',
-              borderWidth: 1,
-              fill: false,
-            },
-            {
-              label: 'Middle Band',
-              data: middleBand.map((value, index) => ({
-                x: ohlcData[index].x,
-                y: value,
-              })),
-              type: 'line',
-              borderColor: 'rgba(0, 255, 0, 0.5)',
-              borderWidth: 1,
-              fill: false,
-            },
-          ]
-          },
+          type: "candlestick", 
+          data: data,
           options: {
             scales: {
               x: {
@@ -199,17 +182,7 @@ const Candlestick = () => {
             },
             plugins: {
               annotation: {
-                annotations: fibonacciLevels.map((level) => ({
-                  type: 'line',
-                  yMin: level,
-                  yMax: level,
-                  borderColor: 'rgba(0, 0, 255, 0.5)',
-                  borderWidth: 2,
-                  label: {
-                    content: `${level.toFixed(2)}`,
-                    enabled: true,
-                  },
-                })),
+                annotations: annotations,
               },
             },
           },
@@ -218,16 +191,16 @@ const Candlestick = () => {
     }
   };
 
-  const timePeriods = ['1MIN', '5MIN', '15MIN', '30MIN', '1HRS', '4HRS', '1HRS', '1DAY', '7DAY', '1MONTH'];
-  const url = `https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD`;
+  const timePeriods = ['1MIN', '5MIN', '30MIN', '1HRS', '4HRS', '1DAY', '7DAY', '1MONTH'];
 
   const handleClick = (period: string) => {
     setSelectedPeriod(period);
-    fetchCoinAPIData(url, period);
-    console.log(`Time period changed to: ${period}`);
+    fetchCoinAPIData(period);
   };
 
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDrawing(true);
+
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
 
@@ -235,6 +208,35 @@ const Candlestick = () => {
     const priceAtMouseDown = getPriceFromYCoord(yCoord);
 
     setStartPoint(priceAtMouseDown);
+
+    const xCoord = event.clientX - rect.left;
+    setStartCoord({ x: xCoord, y: yCoord });
+  };
+
+  
+  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const lineId = 'line_1' || currentLine || `line_${new Date().getTime()}`;
+    if (!isDrawing || !startCoord) return;
+    const chart = chartRef.current;
+    const canvas = event.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    if (chart && startCoord && lineId && chart.options.plugins?.annotation?.annotations) {
+      const newLine: AnnotationOptions<"line"> = {
+        type: 'line',
+        xMin: chart.scales.x.getValueForPixel(startCoord.x),
+        xMax: chart.scales.x.getValueForPixel(x),
+        yMin: chart.scales.y.getValueForPixel(startCoord.y),
+        yMax: chart.scales.y.getValueForPixel(y),
+        value: '3',
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 2,
+      };
+      setAnnotations([newLine])
+      setCurrentLine(lineId);
+    }
+
   };
 
   const handleMouseUp = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -244,11 +246,43 @@ const Candlestick = () => {
     const yCoord = event.clientY - rect.top;
 
     const priceAtMouseUp = getPriceFromYCoord(yCoord);
-    // setEndPoint(priceAtMouseUp);
+    const chart = chartRef.current;
+    const xCoord = event.clientX - rect.left;
 
-    if (startPoint !== null) {
-      const levels = calculateFibonacciLevels(startPoint, priceAtMouseUp);
-      setFibonacciLevels(levels);
+    if (startCoord && chart) {
+      const newAnnotation: AnnotationOptions<"line"> = {
+        type: 'line',
+        xMin: chart.scales.x.getValueForPixel(startCoord.x),
+        xMax: chart.scales.x.getValueForPixel(xCoord),
+        yMin: chart.scales.y.getValueForPixel(startCoord.y),
+        yMax: chart.scales.y.getValueForPixel(yCoord),
+        borderColor: 'rgba(255,99,132,1)',
+        borderWidth: 2,
+      };
+
+      if (startPoint !== null) {
+        const fibonacciLevels = calculateFibonacciLevels(startPoint, priceAtMouseUp);
+
+        const fib: AnnotationOptions<"line">[] = fibonacciLevels.map((level) => ({
+          type: 'line',
+          yMin: level,
+          yMax: level,
+          borderColor: 'rgba(0, 0, 255, 0.5)',
+          borderWidth: 2,
+          label: {
+            content: `${level.toFixed(2)}`,
+            enabled: true,
+          },
+        }))
+
+        if (chart.options.plugins?.annotation?.annotations) {
+          setAnnotations((prev) => [...prev, newAnnotation, ...fib]);
+        }
+
+        setStartCoord(null); 
+        setIsDrawing(false);
+        setCurrentLine(null);
+      }
     }
   };
 
@@ -278,7 +312,7 @@ const Candlestick = () => {
 
 
   useEffect(() => {
-    fetchCoinAPIData(url, '1MIN');
+    fetchCoinAPIData('1MIN');
 
     return () => {
       if (chartRef.current) {
@@ -288,28 +322,23 @@ const Candlestick = () => {
   }, [])
 
   useEffect(() => {
-    initChart(chartData1);
-  }, [fibonacciLevels]);
+    initChart(chartData);
+  }, [annotations]);
 
   return (
     <div>
       <Tabs defaultValue={timePeriods[0]} className="w-[400px]">
         <TabsList>
-          <TabsTrigger onClick={() => handleClick(timePeriods[0])} value={timePeriods[0]}>1m</TabsTrigger>
-          <TabsTrigger onClick={() => handleClick(timePeriods[1])} value={timePeriods[1]}>5m</TabsTrigger>
-          <TabsTrigger onClick={() => handleClick(timePeriods[4])} value={timePeriods[4]}>1h</TabsTrigger>
+          {timePeriods.map(timePeriod => (
+            <TabsTrigger key={timePeriod} onClick={() => handleClick(timePeriod)} value={timePeriod}>{timePeriod}</TabsTrigger>
+          ))}
         </TabsList>
-        <TabsContent value={timePeriods[0]}>
-          <canvas className="canvas" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} ref={canvasRef}></canvas>
+        {timePeriods.map((timePeriod) => (
+        <TabsContent key={timePeriod} value={timePeriod}>
+          <canvas className="canvas" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} ref={canvasRef}></canvas>
         </TabsContent>
-        <TabsContent value={timePeriods[1]}>
-          <canvas className="canvas" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} ref={canvasRef}></canvas>
-        </TabsContent>  
-        <TabsContent value={timePeriods[4]}>
-          <canvas className="canvas" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} ref={canvasRef}></canvas>
-        </TabsContent>    
+         ))} 
       </Tabs>
-
     </div>
   )
 }
