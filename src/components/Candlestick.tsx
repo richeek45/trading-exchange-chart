@@ -80,7 +80,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
   
   const fetchCoinAPIData = async (selectedPeriod: string) => {
     try {
-      const response = await axios.get(`http://localhost:3000/api?mode=${MODE}&period=${selectedPeriod}`)      
+      const response = await axios.get(`${window.location.href}/api?mode=${MODE}&period=${selectedPeriod}`)      
       const ohlcData = response.data.data;
       console.log(ohlcData);
       setChartData(ohlcData);
