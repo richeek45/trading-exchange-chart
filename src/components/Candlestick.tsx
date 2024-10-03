@@ -51,7 +51,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
 
   const [selectedPeriod, setSelectedPeriod] = useState('1MIN');
 
-  const calculateBollingerBands = (data: CandlestickData[], period = 10) => {
+  const calculateBollingerBands = (data: CandlestickData[], period = 20) => {
     const middleBand = [];
     const upperBand = [];
     const lowerBand = [];
@@ -227,10 +227,12 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
   const handleClick = (period: string) => {
     setSelectedPeriod(period);
     fetchCoinAPIData(period);
+    setAnnotations([]);
   };
 
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
+    setAnnotations([]);
 
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
