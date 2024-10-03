@@ -9,7 +9,6 @@ import zoomPlugin from 'chartjs-plugin-zoom';
 import 'chartjs-adapter-moment';
 import "chart.js/auto";
 import {Chart, ChartData, Point, registerables } from "chart.js"; 
-// import {chartData as chartData1} from './chart';
 
 Chart.register( ...registerables, CandlestickController, CandlestickElement, annotationPlugin, zoomPlugin );
 
@@ -30,8 +29,8 @@ const unit: Record<string, timeUnit> = {
   '1HRS': 'hour', 
   '4HRS': 'hour', 
   '1DAY': 'day', 
-  '7DAY': 'day', 
-  '1MTH': 'day',
+  '7DAY': 'week', 
+  '1MTH': 'month',
   '3MTH': 'month',
   '6MTH': 'month', 
   '1YRS': 'year'
@@ -51,7 +50,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
 
   const [selectedPeriod, setSelectedPeriod] = useState('1MIN');
 
-  const calculateBollingerBands = (data: CandlestickData[], period = 20) => {
+  const calculateBollingerBands = (data: CandlestickData[], period = 10) => {
     const middleBand = [];
     const upperBand = [];
     const lowerBand = [];
@@ -84,24 +83,21 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
       const ohlcData = response.data.data;
       console.log(ohlcData);
       setChartData(ohlcData);
-      initChart(ohlcData);
-
-      // setChartData(chartData1);
-      // initChart(chartData1);
-
+      initChart(ohlcData, selectedPeriod);
     } catch(error) {
       console.error("Error fetching data from CoinAPI", error);
     }
   }
 
-  const { middleBand, upperBand, lowerBand } = calculateBollingerBands(chartData);
 
-  const initChart = (ohlcData: CandlestickData[]) => {
+  const initChart = (ohlcData: CandlestickData[], selectedPeriod = '1MIN') => {
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
       if (ctx && chartRef.current) {
         chartRef.current.destroy(); 
       }
+
+      const { middleBand, upperBand, lowerBand } = calculateBollingerBands(ohlcData);
 
       const data: ChartData<'line' | 'bar' | 'candlestick'> = {
         datasets: [
@@ -351,7 +347,7 @@ const Candlestick = ({ MODE } : {MODE : string}) => {
   }, [])
 
   useEffect(() => {
-    initChart(chartData);
+    initChart(chartData, selectedPeriod);
   }, [annotations]);
 
   return (
